@@ -1,0 +1,43 @@
+{
+  "name": "todo-electron-react",
+  "version": "1.0.0",
+  "description": "Todo desktop app built with Electron + React (Vite)",
+  "main": "main.js",
+  "scripts": {
+    "dev:react": "vite",
+    "build:react": "vite build",
+    "start": "npm run build:react && electron .",
+    "electron": "electron .",
+    "build": "npm run build:react && electron-builder --win",
+    "build:mac": "npm run build:react && electron-builder --mac",
+    "build:linux": "npm run build:react && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.todo.electron.react",
+    "productName": "Todo App",
+    "files": [
+      "main.js",
+      "dist/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "keywords": ["electron", "react", "vite", "todo", "desktop"],
+  "author": "mkendurance",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.0.8"
+  }
+}

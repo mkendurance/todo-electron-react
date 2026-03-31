@@ -1,0 +1,17 @@
+{
+  "name": "todo-electron-react-tests",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for the Todo Electron React App",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report playwright-report"
+  },
+  "keywords": ["playwright", "electron", "react", "e2e", "testing"],
+  "author": "mkendurance",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0"
+  }
+}

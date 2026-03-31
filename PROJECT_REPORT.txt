@@ -1,0 +1,413 @@
+================================================================================
+  TODO ELECTRON REACT APP — PROJECT REPORT
+  Folder: to-do-electron-react
+  Date: March 2026
+================================================================================
+
+TABLE OF CONTENTS
+─────────────────
+1.  Project Overview
+2.  Technologies Used
+3.  Project Structure
+4.  How to Run the App (Development)
+5.  How to Build the App (Installer)
+6.  How to Run the Tests
+7.  Test Architecture — Single App Instance
+8.  Test Cases Covered (20 tests)
+9.  Test Report Summary
+10. Architecture: How Electron + Vite + React Work Together
+11. Troubleshooting
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+This is the React rewrite of the original Todo Electron App. The core
+functionality is identical — the UI looks the same, the Playwright test
+selectors are the same, and all 20 test cases are the same. The difference
+is that the renderer process is now a proper React application (built with
+Vite) instead of a single vanilla HTML/JS file.
+
+The app allows users to:
+  - Add new todo tasks (button click or Enter key)
+  - Mark tasks as complete / incomplete
+  - Edit task text inline (with Save and Cancel)
+  - Delete individual tasks
+  - Filter tasks: All / Active / Completed
+  - Clear all completed tasks at once
+  - See a live count of remaining active tasks
+  - See an empty-state message when there are no tasks
+
+Two separate Node.js projects live side by side:
+  - todo-electron-react/        → Electron + React (Vite) app
+  - todo-electron-react-tests/  → Playwright E2E test suite
+
+================================================================================
+2. TECHNOLOGIES USED
+================================================================================
+
+APPLICATION (todo-electron-react/)
+────────────────────────────────────
+  Technology          Version       Purpose
+  ──────────────────────────────────────────────────────────────────────────────
+  Electron            ^28.0.0       Desktop application shell. Creates the
+                                    native OS window and loads the React app
+                                    from the compiled dist/index.html.
+
+  React               ^18.2.0       UI library. The entire app UI is built as
+                                    React functional components using hooks
+                                    (useState, useRef). React manages all state
+                                    and re-renders the DOM efficiently via its
+                                    virtual DOM diffing.
+
+  Vite                ^5.0.8        Lightning-fast frontend build tool. In dev
+                                    mode it serves the React app with HMR. For
+                                    production it bundles everything into
+                                    dist/index.html + dist/assets/ which
+                                    Electron loads via loadFile().
+
+  @vitejs/plugin-react ^4.2.1       Vite plugin that enables JSX transform and
+                                    React Fast Refresh during development.
+
+  JSX                 —             React's syntax extension for JavaScript that
+                                    lets you write HTML-like markup inside JS
+                                    files (*.jsx). Vite/Babel transforms this to
+                                    standard JS at build time.
+
+  CSS Modules         —             Component-scoped CSS. App.css styles the
+                                    main component; index.css sets global body
+                                    styles.
+
+  Node.js             ≥18.x         Runtime for both Electron's main process
+                                    and the Vite build toolchain.
+
+  electron-builder    ^24.9.1       Packages the built Electron app into a
+                                    distributable installer (.exe, .dmg, .AppImage).
+
+TESTING (todo-electron-react-tests/)
+──────────────────────────────────────
+  Technology          Version       Purpose
+  ──────────────────────────────────────────────────────────────────────────────
+  Playwright          ^1.40.0       E2E testing framework with first-class
+                                    Electron support via the _electron API. It
+                                    launches the Electron process directly,
+                                    obtains a Page reference to the renderer
+                                    window, and lets tests interact with DOM
+                                    elements exactly as a real user would.
+
+  @playwright/test    ^1.40.0       The Playwright test runner. Provides
+                                    test(), expect(), beforeAll(), afterAll(),
+                                    beforeEach() lifecycle hooks, and a rich
+                                    assertion library.
+
+  Node.js             ≥18.x         Runtime for executing the test suite.
+
+================================================================================
+3. PROJECT STRUCTURE
+================================================================================
+
+to-do-electron-react/
+├── .gitignore
+├── README.md
+├── PROJECT_REPORT.txt
+│
+├── todo-electron-react/                  ← The Electron + React App
+│   ├── package.json                      ← Dependencies, scripts, build config
+│   ├── vite.config.js                    ← Vite config (base: './' for Electron)
+│   ├── main.js                           ← Electron main process
+│   ├── index.html                        ← Vite HTML entry point
+│   └── src/
+│       ├── main.jsx                      ← React app bootstrap (ReactDOM.createRoot)
+│       ├── App.jsx                       ← Root React component (all app logic)
+│       ├── App.css                       ← Component styles
+│       └── index.css                     ← Global body styles
+│
+└── todo-electron-react-tests/            ← The Playwright Test Suite
+    ├── package.json                      ← Test dependencies & scripts
+    ├── playwright.config.js              ← Config (workers, reporters, timeout)
+    └── tests/
+        └── todo.spec.js                  ← All 20 E2E test cases
+
+After running `npm run build:react` a dist/ folder is generated inside
+todo-electron-react/ — this is what Electron loads at runtime.
+
+================================================================================
+4. HOW TO RUN THE APP (Development)
+================================================================================
+
+Prerequisites
+─────────────
+  - Node.js 18 or newer  →  https://nodejs.org/
+  - npm (comes with Node.js)
+
+Steps
+─────
+  1. Open a terminal and navigate into the app folder:
+       cd todo-electron-react
+
+  2. Install dependencies:
+       npm install
+
+  3. Build the React app AND launch Electron:
+       npm start
+
+     This command runs `vite build` first, then `electron .`. Electron
+     loads the compiled dist/index.html from the file system.
+
+  Alternative — build once, run multiple times:
+       npm run build:react      (only needed when source changes)
+       npm run electron         (launch without rebuilding)
+
+NOTE: Do NOT use `npm run dev:react` to run in Electron. That starts the
+Vite dev server on localhost; Electron is configured to load from dist/
+(file://), not from a local HTTP server. Use `npm start` which builds first.
+
+================================================================================
+5. HOW TO BUILD THE APP (Create an Installer)
+================================================================================
+
+Steps
+─────
+  1. Navigate into the app folder:
+       cd todo-electron-react
+
+  2. Install dependencies (if not done yet):
+       npm install
+
+  3. Run the build for your platform:
+
+       Windows → produces a .exe NSIS installer in dist/
+         npm run build
+
+       macOS → produces a .dmg in dist/
+         npm run build:mac
+
+       Linux → produces an .AppImage in dist/
+         npm run build:linux
+
+  Each command first runs `vite build` to compile React, then hands the
+  dist/ folder to electron-builder which packages everything into a
+  self-contained installer. The installer is placed in:
+       todo-electron-react/dist/
+
+================================================================================
+6. HOW TO RUN THE TESTS
+================================================================================
+
+Prerequisites
+─────────────
+  - Node.js 18 or newer
+  - The React app must be BUILT before running tests (the tests launch
+    Electron which loads dist/index.html):
+      cd todo-electron-react && npm install && npm run build:react
+  - The Todo app must NOT be running manually (tests launch their own instance)
+
+Steps
+─────
+  1. Build the app first (one-time, or after any source change):
+       cd todo-electron-react
+       npm install
+       npm run build:react
+
+  2. Open a NEW terminal in the tests folder:
+       cd todo-electron-react-tests
+
+  3. Install test dependencies:
+       npm install
+
+  4. Run all 20 tests:
+       npm test
+       — OR —
+       npx playwright test
+
+  5. View the HTML report after the run:
+       npm run test:report
+
+  Optional — watch the window interact:
+       npm run test:headed
+
+Output locations
+────────────────
+  - Console output (list)             : printed in terminal during run
+  - HTML report                       : todo-electron-react-tests/playwright-report/index.html
+  - JSON results                      : todo-electron-react-tests/test-results/results.json
+
+================================================================================
+7. TEST ARCHITECTURE — SINGLE APP INSTANCE
+================================================================================
+
+All 20 tests share ONE running Electron window:
+
+  beforeAll  →  electron.launch()  →  app starts once
+  beforeEach →  delete all todos   →  clean state per test
+  test 1–20  →  run against same window
+  afterAll   →  app.close()        →  app stops once
+
+The beforeEach hook deletes every todo by repeatedly clicking the first
+.delete-btn until none remain, then resets the filter to "All".
+
+Why this matters:
+  ✅ Fast — Electron starts only once (saves ~1–2s per test)
+  ✅ Stable — no repeated process lifecycle churn
+  ✅ Debuggable — window stays open between tests in headed mode
+  ✅ Correct — official Playwright pattern for Electron
+
+playwright.config.js enforces `workers: 1` because Electron does not
+support parallel renderer contexts in the same process.
+
+React-specific addition vs. vanilla version:
+  The beforeAll hook now also waits for the React root to mount:
+    await window.waitForSelector('#root', { timeout: 10000 });
+    await window.waitForSelector('#todo-input', { timeout: 10000 });
+  This ensures React has fully hydrated before any test starts.
+
+================================================================================
+8. TEST CASES COVERED
+================================================================================
+
+  ID     Description
+  ─────────────────────────────────────────────────────────────────────────────
+  TC-01  App launches and shows correct title ("Todo App")
+  TC-02  Add a single todo task
+  TC-03  Add multiple todo tasks
+  TC-04  Input field clears after adding a task
+  TC-05  Empty input does not create a task
+  TC-06  Add task using the Enter key
+  TC-07  Mark a task as completed (checkbox toggle)
+  TC-08  Completed task has strikethrough text style
+  TC-09  Uncheck a completed task returns it to active
+  TC-10  Delete a single task
+  TC-11  Delete one task among multiple (correct item deleted)
+  TC-12  Edit a task and save the new text
+  TC-13  Cancel edit reverts to original text
+  TC-14  Stats counter shows correct remaining task count
+  TC-15  Filter "Active" shows only incomplete tasks
+  TC-16  Filter "Completed" shows only completed tasks
+  TC-17  Filter "All" shows all tasks regardless of status
+  TC-18  "Clear Completed" removes all completed tasks
+  TC-19  "Clear Completed" button is hidden when no completed tasks
+  TC-20  Empty state message is shown when the list is empty
+  ─────────────────────────────────────────────────────────────────────────────
+  Total: 20 test cases covering all core application features
+
+================================================================================
+9. TEST REPORT SUMMARY
+================================================================================
+
+  Total Tests     : 20
+  Expected Result : All 20 pass in a single uninterrupted run
+  Workers Used    : 1 (sequential, required for Electron)
+  App Starts      : 1 (shared across all tests)
+  App Closes      : 1 (at the very end)
+
+  Features tested :
+    - UI rendering / app launch / React hydration
+    - Task creation (button click + Enter key)
+    - Input validation (empty input guard)
+    - Task completion toggle (check / uncheck)
+    - Task deletion (single + among many)
+    - Inline editing (save & cancel)
+    - Filter navigation (All / Active / Completed)
+    - Bulk operations (Clear Completed)
+    - Stats display
+    - Empty state display
+
+================================================================================
+10. ARCHITECTURE: HOW ELECTRON + VITE + REACT WORK TOGETHER
+================================================================================
+
+Development / Build Flow
+─────────────────────────
+
+  src/main.jsx          ← React entry (ReactDOM.createRoot)
+  src/App.jsx           ← Root component (all state + UI)
+  src/App.css           ← Component styles
+        │
+        ▼
+  vite build  (npm run build:react)
+        │
+        ▼
+  dist/
+  ├── index.html        ← Bundled HTML with injected <script>
+  └── assets/
+      ├── index-[hash].js    ← Bundled React + app JS
+      └── index-[hash].css   ← Bundled CSS
+        │
+        ▼
+  main.js  →  mainWindow.loadFile('dist/index.html')
+        │
+        ▼
+  Electron window displays the React app
+
+Key configuration: vite.config.js sets `base: './'`
+  Without this, Vite generates absolute asset paths (/assets/...)
+  that fail under the file:// protocol Electron uses. The relative
+  base ensures all asset URLs resolve correctly from dist/index.html.
+
+State Management
+─────────────────
+  All todo state lives in App.jsx using React's useState hook:
+    - todos        : array of { id, text, completed }
+    - inputValue   : controlled input string
+    - filter       : 'all' | 'active' | 'completed'
+    - editingId    : id of the todo currently being edited (or null)
+    - editingText  : draft text for the in-progress edit
+
+  There is no external state library (Redux, Zustand, etc.) — the app
+  is small enough that local component state is sufficient.
+
+Selector Stability (Tests ↔ React)
+────────────────────────────────────
+  All HTML IDs and class names used by the Playwright tests are
+  explicitly set in App.jsx:
+    id="todo-input", id="add-btn", id="stats", id="todo-list",
+    id="clear-completed", data-filter="all|active|completed",
+    className="todo-item", className="todo-text",
+    className="todo-checkbox", className="edit-btn",
+    className="delete-btn", className="edit-input",
+    className="save-btn", className="cancel-btn",
+    className="empty-state"
+
+  React does not mangle these — they appear in the rendered DOM
+  exactly as written, so no test changes were needed after the
+  rewrite from vanilla JS to React.
+
+================================================================================
+11. TROUBLESHOOTING
+================================================================================
+
+Problem: "Cannot read dist/index.html — file not found"
+  Solution: You must build the React app before running Electron or tests.
+            cd todo-electron-react && npm run build:react
+
+Problem: "electron.launch: Process failed to launch"
+  Solution: Ensure Electron is installed:
+            cd todo-electron-react && npm install
+            The test args path must point to main.js:
+            ../../todo-electron-react/main.js  (relative to tests/todo.spec.js)
+
+Problem: Tests fail with "Element not found" on #todo-input
+  Solution: beforeAll now waits for #root and #todo-input. If still failing,
+            increase the timeout in playwright.config.js (default 30000 ms)
+            or the waitForSelector timeout in beforeAll.
+
+Problem: TC-19 fails — cannot find #clear-completed
+  Solution: App.jsx always renders a hidden #clear-completed button when
+            completedCount === 0 (style={{ display: 'none' }}). This ensures
+            the selector always exists in the DOM for Playwright to find.
+
+Problem: App shows blank white window
+  Solution: dist/ is missing or stale. Run:
+            cd todo-electron-react && npm run build:react
+            Then restart Electron.
+
+Problem: "Cannot find module '@playwright/test'"
+  Solution: cd todo-electron-react-tests && npm install
+
+Problem: Multiple Electron windows appear
+  Solution: workers: 1 must be set in playwright.config.js (it is by
+            default). Never set fullyParallel: true for Electron tests.
+
+================================================================================
+END OF REPORT
+================================================================================
